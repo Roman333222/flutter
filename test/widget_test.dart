@@ -18,5 +18,17 @@ void main() {
     await tester.tap(find.text('Рассчитать'));
     await tester.pumpAndSettle();
     expect(find.text('(2.0 + 3.0)² = 25.0'), findsOneWidget);
+    await tester.tap(find.text('Назад'));
+    await tester.pumpAndSettle();
+    expect(find.text('Рассчитать'), findsOneWidget);
+  });
+
+  test('Cubit вычисляет квадрат суммы и сбрасывает результат', () {
+    final cubit = CalculatorCubit();
+    cubit.calculate(-2, 5);
+    expect(cubit.state.result, 9);
+    cubit.reset();
+    expect(cubit.state.result, isNull);
+    cubit.close();
   });
 }

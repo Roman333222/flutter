@@ -1,14 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
-  Widget build(BuildContext context) => const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: CalculatorPage(),
+  Widget build(BuildContext context) => BlocProvider(
+    create: (context) => CalculatorCubit(),
+    child: const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: CalculatorPage(),
+    ),
   );
+}
+
+// Пока результата нет, показываем форму.
+class CalculatorState {
+  const CalculatorState({this.a, this.b, this.result});
+  final double? a;
+  final double? b;
+  final double? result;
+}
+
+class CalculatorCubit extends Cubit<CalculatorState> {
+  CalculatorCubit() : super(const CalculatorState());
+
+  void calculate(double a, double b) {
+    final result = (a + b) * (a + b);
+    emit(CalculatorState(a: a, b: b, result: result));
+  }
+
+  void reset() => emit(const CalculatorState());
 }
 
 class CalculatorPage extends StatefulWidget {
@@ -43,12 +66,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
     if (!valid || !agreed) return;
     final a = double.parse(aController.text.replaceAll(',', '.'));
     final b = double.parse(bController.text.replaceAll(',', '.'));
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ResultPage(a: a, b: b),
-      ),
-    );
+    context.read<CalculatorCubit>().calculate(a, b);
   }
 
   @override
@@ -58,79 +76,78 @@ class _CalculatorPageState extends State<CalculatorPage> {
         title: const Text('Осипов Роман'),
         backgroundColor: Colors.blue,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Калькулятор квадрата суммы (a + b)²',
-                style: TextStyle(fontSize: 20),
+      body: BlocBuilder<CalculatorCubit, CalculatorState>(
+        builder: (context, state) {
+          if (state.result != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '(${state.a} + ${state.b})² = ${state.result}',
+                    style: const TextStyle(fontSize: 24),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.read<CalculatorCubit>().reset(),
+                    child: const Text('Назад'),
+                  ),
+                ],
               ),
-              TextFormField(
-                controller: aController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: true,
-                ),
-                decoration: const InputDecoration(labelText: 'Число a'),
-                validator: validateNumber,
+            );
+          }
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Калькулятор квадрата суммы (a + b)²',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                  TextFormField(
+                    controller: aController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                      signed: true,
+                    ),
+                    decoration: const InputDecoration(labelText: 'Число a'),
+                    validator: validateNumber,
+                  ),
+                  TextFormField(
+                    controller: bController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                      signed: true,
+                    ),
+                    decoration: const InputDecoration(labelText: 'Число b'),
+                    validator: validateNumber,
+                  ),
+                  CheckboxListTile(
+                    title: const Text('Согласен на обработку данных'),
+                    value: agreed,
+                    onChanged: (value) => setState(() {
+                      agreed = value ?? false;
+                      showConsentError = false;
+                    }),
+                  ),
+                  if (showConsentError)
+                    const Text(
+                      'Необходимо согласие на обработку данных',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: calculate,
+                    child: const Text('Рассчитать'),
+                  ),
+                ],
               ),
-              TextFormField(
-                controller: bController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: true,
-                ),
-                decoration: const InputDecoration(labelText: 'Число b'),
-                validator: validateNumber,
-              ),
-              CheckboxListTile(
-                title: const Text('Согласен на обработку данных'),
-                value: agreed,
-                onChanged: (value) => setState(() {
-                  agreed = value ?? false;
-                  showConsentError = false;
-                }),
-              ),
-              if (showConsentError)
-                const Text(
-                  'Необходимо согласие на обработку данных',
-                  style: TextStyle(color: Colors.red),
-                ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: calculate,
-                child: const Text('Рассчитать'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class ResultPage extends StatelessWidget {
-  const ResultPage({super.key, required this.a, required this.b});
-  final double a;
-  final double b;
-
-  @override
-  Widget build(BuildContext context) {
-    final result = (a + b) * (a + b);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Результат'),
-        backgroundColor: Colors.blue,
-      ),
-      body: Center(
-        child: Text(
-          '($a + $b)² = $result',
-          style: const TextStyle(fontSize: 24),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
