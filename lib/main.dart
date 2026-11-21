@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'cubit/calculator_cubit.dart';
-import 'data/calculation_storage.dart';
-import 'screens/calculator_page.dart';
+import 'cubit/cats_cubit.dart';
+import 'requests/cats_api.dart';
+import 'screens/cats_page.dart';
 
 void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key, this.storage});
-  final CalculationStorage? storage;
+  const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) => BlocProvider(
-    create: (context) => CalculatorCubit(storage ?? CalculationStorage()),
-    child: const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: CalculatorPage(),
-    ),
-  );
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => CatsCubit(CatsApi())..load(),
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: CatsPage(),
+      ),
+    );
+  }
 }

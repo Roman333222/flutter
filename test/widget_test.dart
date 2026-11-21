@@ -1,71 +1,31 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_app/main.dart';
-import 'package:my_app/cubit/calculator_cubit.dart';
-import 'package:my_app/data/calculation_storage.dart';
-
-class FakeStorage extends CalculationStorage {
-  final List<Map<String, Object?>> items = [];
-
-  @override
-  Future<void> save(double a, double b, double result) async {
-    items.insert(0, {'a': a, 'b': b, 'result': result});
-  }
-
-  @override
-  Future<Map<String, double>> loadLastInput() async => {};
-
-  @override
-  Future<List<Map<String, Object?>>> loadHistory() async => items;
-
-  @override
-  Future<void> clearHistory() async => items.clear();
-}
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:my_app/cubit/cats_cubit.dart';
+import 'package:my_app/cubit/cats_state.dart';
+import 'package:my_app/requests/cats_api.dart';
 
 void main() {
-  testWidgets('Проверка формы и расчёта', (tester) async {
-    final storage = FakeStorage();
-    await tester.pumpWidget(MyApp(storage: storage));
-    await tester.tap(find.text('Рассчитать'));
-    await tester.pump();
-    expect(find.text('Введите число'), findsNWidgets(2));
-    expect(
-      find.text('Необходимо согласие на обработку данных'),
-      findsOneWidget,
-    );
-    await tester.enterText(find.byType(TextFormField).at(0), '2');
-    await tester.enterText(find.byType(TextFormField).at(1), '3');
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.tap(find.text('Рассчитать'));
-    await tester.pumpAndSettle();
-    expect(find.text('(2.0 + 3.0)² = 25.0'), findsOneWidget);
-    await tester.tap(find.text('Назад'));
-    await tester.pumpAndSettle();
-    expect(find.text('Рассчитать'), findsOneWidget);
-    await tester.tap(find.byTooltip('История расчётов'));
-    await tester.pumpAndSettle();
-    expect(find.text('(2.0 + 3.0)² = 25.0'), findsOneWidget);
-    await tester.tap(find.byTooltip('Очистить историю'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Отмена'));
-    await tester.pumpAndSettle();
-    expect(find.text('(2.0 + 3.0)² = 25.0'), findsOneWidget);
-    await tester.tap(find.byTooltip('Очистить историю'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Очистить'));
-    await tester.pumpAndSettle();
-    expect(find.text('История пока пуста'), findsOneWidget);
-    expect(storage.items, isEmpty);
+  test('Запрос читает фотографии и передаёт limit=10', () async {
+    final client = MockClient((request) async {
+      expect(request.url.queryParameters['limit'], '10');
+      return http.Response(
+        '[{"id":"cat1","url":"https://example.com/cat.jpg","width":400,"height":300}]',
+        200,
+      );
+    });
+    final api = CatsApi(client: client);
+    final cats = await api.fetchCats();
+    expect(cats.single.id, 'cat1');
+    expect(cats.single.width, 400);
+    api.dispose();
   });
 
-  test('Cubit вычисляет квадрат суммы и сбрасывает результат', () async {
-    final storage = FakeStorage();
-    final cubit = CalculatorCubit(storage);
-    await cubit.calculate(-2, 5);
-    expect(cubit.state.result, 9);
-    expect(storage.items.single['result'], 9);
-    cubit.reset();
-    expect(cubit.state.result, isNull);
+  test('Cubit показывает ошибку при неуспешном ответе', () async {
+    final client = MockClient((request) async => http.Response('error', 500));
+    final cubit = CatsCubit(CatsApi(client: client));
+    await cubit.load();
+    expect(cubit.state, isA<CatsError>());
     await cubit.close();
   });
 }
