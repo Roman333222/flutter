@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../cubit/calculator_cubit.dart';
 import '../cubit/calculator_state.dart';
+import '../cubit/history_cubit.dart';
+import 'history_page.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage({super.key});
@@ -16,6 +18,30 @@ class _CalculatorPageState extends State<CalculatorPage> {
   final bController = TextEditingController();
   bool agreed = false;
   bool showConsentError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadLastInput();
+  }
+
+  Future<void> loadLastInput() async {
+    try {
+      final values = await context
+          .read<CalculatorCubit>()
+          .storage
+          .loadLastInput();
+      if (!mounted) return;
+      if (aController.text.isEmpty && values['a'] != null) {
+        aController.text = values['a'].toString();
+      }
+      if (bController.text.isEmpty && values['b'] != null) {
+        bController.text = values['b'].toString();
+      }
+    } catch (_) {
+      // Если сохранённых данных нет, форма останется пустой.
+    }
+  }
 
   @override
   void dispose() {
@@ -45,6 +71,22 @@ class _CalculatorPageState extends State<CalculatorPage> {
       appBar: AppBar(
         title: const Text('Осипов Роман'),
         backgroundColor: Colors.blue,
+        leading: IconButton(
+          tooltip: 'История расчётов',
+          icon: const Icon(Icons.history),
+          onPressed: () {
+            final storage = context.read<CalculatorCubit>().storage;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BlocProvider(
+                  create: (context) => HistoryCubit(storage)..load(),
+                  child: const HistoryPage(),
+                ),
+              ),
+            );
+          },
+        ),
       ),
       body: BlocBuilder<CalculatorCubit, CalculatorState>(
         builder: (context, state) {
@@ -108,10 +150,15 @@ class _CalculatorPageState extends State<CalculatorPage> {
                       'Необходимо согласие на обработку данных',
                       style: TextStyle(color: Colors.red),
                     ),
+                  if (state.error != null)
+                    Text(
+                      state.error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: calculate,
-                    child: const Text('Рассчитать'),
+                    onPressed: state.loading ? null : calculate,
+                    child: Text(state.loading ? 'Сохранение...' : 'Рассчитать'),
                   ),
                 ],
               ),
