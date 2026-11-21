@@ -17,6 +17,9 @@ class FakeStorage extends CalculationStorage {
 
   @override
   Future<List<Map<String, Object?>>> loadHistory() async => items;
+
+  @override
+  Future<void> clearHistory() async => items.clear();
 }
 
 void main() {
@@ -42,6 +45,17 @@ void main() {
     await tester.tap(find.byTooltip('История расчётов'));
     await tester.pumpAndSettle();
     expect(find.text('(2.0 + 3.0)² = 25.0'), findsOneWidget);
+    await tester.tap(find.byTooltip('Очистить историю'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Отмена'));
+    await tester.pumpAndSettle();
+    expect(find.text('(2.0 + 3.0)² = 25.0'), findsOneWidget);
+    await tester.tap(find.byTooltip('Очистить историю'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Очистить'));
+    await tester.pumpAndSettle();
+    expect(find.text('История пока пуста'), findsOneWidget);
+    expect(storage.items, isEmpty);
   });
 
   test('Cubit вычисляет квадрат суммы и сбрасывает результат', () async {

@@ -42,4 +42,9 @@ class CalculationStorage {
     final db = await database;
     return db.query('calculations', orderBy: 'id DESC');
   }
+
+  Future<void> clearHistory() async {
+    final db = await database;
+    await db.delete('calculations');
+  }
 }

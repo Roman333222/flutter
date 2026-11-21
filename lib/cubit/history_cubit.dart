@@ -18,4 +18,16 @@ class HistoryCubit extends Cubit<HistoryState> {
       }
     }
   }
+
+  Future<void> clear() async {
+    emit(const HistoryState(loading: true));
+    try {
+      await storage.clearHistory();
+      if (!isClosed) emit(const HistoryState());
+    } catch (_) {
+      if (!isClosed) {
+        emit(const HistoryState(error: 'Не удалось очистить историю'));
+      }
+    }
+  }
 }

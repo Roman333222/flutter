@@ -13,6 +13,41 @@ class HistoryPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('История расчётов'),
         backgroundColor: Colors.blue,
+        actions: [
+          BlocBuilder<HistoryCubit, HistoryState>(
+            builder: (context, state) => IconButton(
+              tooltip: 'Очистить историю',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: state.loading || state.items.isEmpty
+                  ? null
+                  : () async {
+                      final cubit = context.read<HistoryCubit>();
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Очистить историю?'),
+                          content: const Text(
+                            'Все сохранённые расчёты будут удалены.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Отмена'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Очистить'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true && !cubit.isClosed) {
+                        await cubit.clear();
+                      }
+                    },
+            ),
+          ),
+        ],
       ),
       body: BlocBuilder<HistoryCubit, HistoryState>(
         builder: (context, state) {
